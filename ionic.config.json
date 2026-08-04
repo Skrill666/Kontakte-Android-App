@@ -1,0 +1,7 @@
+{
+  "name": "kontakte-app",
+  "type": "vue-vite",
+  "integrations": {
+    "capacitor": {}
+  }
+}

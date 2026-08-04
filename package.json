@@ -1,0 +1,50 @@
+{
+  "name": "kontakte-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Android-Kontakte-App mit Ionic Vue und Capacitor",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run test && npm run build && node scripts/verify-project.mjs",
+    "registry:configure": "node scripts/configure-private-registry.mjs",
+    "android:create": "node scripts/create-android.mjs",
+    "android:configure": "node scripts/configure-android.mjs",
+    "android:sync": "npm run build && npx cap sync android && npm run android:configure",
+    "android:open": "npx cap open android",
+    "android:run": "npm run android:sync && npx cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/app-launcher": "8.0.1",
+    "@capacitor/clipboard": "8.0.1",
+    "@capacitor/core": "8.4.2",
+    "@capawesome-team/capacitor-contacts": "8.0.3",
+    "@capawesome/capacitor-sms-composer": "0.1.1",
+    "@ionic/vue": "8.8.16",
+    "@ionic/vue-router": "8.8.16",
+    "ionicons": "8.0.13",
+    "pinia": "4.0.2",
+    "vue": "3.5.40",
+    "vue-router": "4.6.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2",
+    "@types/node": "26.1.2",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vue/test-utils": "2.4.11",
+    "jsdom": "30.0.1",
+    "typescript": "5.9.3",
+    "vite": "8.1.5",
+    "vitest": "4.1.10",
+    "vue-tsc": "3.3.6"
+  }
+}
