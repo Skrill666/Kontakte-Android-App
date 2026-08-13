@@ -13,6 +13,7 @@ import type { CreateContactInput } from '@/domain/models/CreateContactInput';
 import type { ContactRepository } from '@/domain/repositories/ContactRepository';
 import { mapNativeContactDetail, mapNativeContactSummary } from '@/data/mappers/contactMapper';
 import { ContactPermissionService } from '@/services/native/ContactPermissionService';
+import { DefaultContactAccountService } from '@/services/native/DefaultContactAccountService';
 
 const CONTACT_FIELDS: ContactField[] = [
   'id',
@@ -23,22 +24,33 @@ const CONTACT_FIELDS: ContactField[] = [
   'birthday',
   'photo',
 ];
+
 const PAGE_SIZE = 100;
 
-const birthdayFromInput = (value: string): NativeContact['birthday'] | undefined => {
+const birthdayFromInput = (
+  value: string,
+): NativeContact['birthday'] | undefined => {
   if (!value) {
     return undefined;
   }
+
   const [year, month, day] = value.split('-').map(Number);
+
   if (!year || !month || !day) {
     return undefined;
   }
-  return { year, month, day };
+
+  return {
+    year,
+    month,
+    day,
+  };
 };
 
 export class CapacitorContactRepository implements ContactRepository {
   public constructor(
     private readonly permissionService = new ContactPermissionService(),
+    private readonly defaultContactAccountService = new DefaultContactAccountService(),
   ) {}
 
   public checkPermissions(): Promise<ContactPermissionState> {
@@ -56,6 +68,7 @@ export class CapacitorContactRepository implements ContactRepository {
   public async getContacts(): Promise<ContactSummary[]> {
     try {
       const { total } = await Contacts.countContacts();
+
       const contacts: ContactSummary[] = [];
 
       for (let offset = 0; offset < total; offset += PAGE_SIZE) {
@@ -64,10 +77,16 @@ export class CapacitorContactRepository implements ContactRepository {
           limit: PAGE_SIZE,
           offset,
         });
+
         const mapped = result.contacts
           .map(mapNativeContactSummary)
-          .filter((contact): contact is ContactSummary => contact !== null);
+          .filter(
+            (contact): contact is ContactSummary =>
+              contact !== null,
+          );
+
         contacts.push(...mapped);
+
         if (result.contacts.length === 0) {
           break;
         }
@@ -83,13 +102,18 @@ export class CapacitorContactRepository implements ContactRepository {
     }
   }
 
-  public async getContactById(contactId: string): Promise<ContactDetail | null> {
+  public async getContactById(
+    contactId: string,
+  ): Promise<ContactDetail | null> {
     try {
       const { contact } = await Contacts.getContactById({
         id: contactId,
         fields: CONTACT_FIELDS,
       });
-      return contact ? mapNativeContactDetail(contact) : null;
+
+      return contact
+        ? mapNativeContactDetail(contact)
+        : null;
     } catch (error) {
       throw asAppError(
         error,
@@ -99,24 +123,53 @@ export class CapacitorContactRepository implements ContactRepository {
     }
   }
 
-  public async createContact(input: CreateContactInput): Promise<string> {
+  public async createContact(
+    input: CreateContactInput,
+  ): Promise<string> {
     try {
+      const defaultAccount =
+        await this.defaultContactAccountService.getDefaultAccount();
+
       const contact: Omit<NativeContact, 'id'> = {
+        ...(defaultAccount
+          ? {
+              account: defaultAccount,
+            }
+          : {}),
         givenName: input.givenName || undefined,
         familyName: input.familyName || undefined,
         birthday: birthdayFromInput(input.birthday),
         phoneNumbers: input.phoneNumber
-          ? [{ value: input.phoneNumber, type: PhoneNumberType.Mobile, isPrimary: true }]
+          ? [
+              {
+                value: input.phoneNumber,
+                type: PhoneNumberType.Mobile,
+                isPrimary: true,
+              },
+            ]
           : undefined,
         emailAddresses: input.emailAddress
-          ? [{ value: input.emailAddress, type: EmailAddressType.Home, isPrimary: true }]
+          ? [
+              {
+                value: input.emailAddress,
+                type: EmailAddressType.Home,
+                isPrimary: true,
+              },
+            ]
           : undefined,
       } as Omit<NativeContact, 'id'>;
 
-      const { id } = await Contacts.createContact({ contact });
+      const { id } = await Contacts.createContact({
+        contact,
+      });
+
       if (!id) {
-        throw new AppError('CONTACT_CREATE_FAILED', 'Der neue Kontakt besitzt keine gültige ID.');
+        throw new AppError(
+          'CONTACT_CREATE_FAILED',
+          'Der neue Kontakt besitzt keine gültige ID.',
+        );
       }
+
       return id;
     } catch (error) {
       throw asAppError(
@@ -127,9 +180,13 @@ export class CapacitorContactRepository implements ContactRepository {
     }
   }
 
-  public async deleteContact(contactId: string): Promise<void> {
+  public async deleteContact(
+    contactId: string,
+  ): Promise<void> {
     try {
-      await Contacts.deleteContactById({ id: contactId });
+      await Contacts.deleteContactById({
+        id: contactId,
+      });
     } catch (error) {
       throw asAppError(
         error,
